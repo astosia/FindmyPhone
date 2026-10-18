@@ -1,0 +1,35 @@
+{
+  "name": "ping-phone",
+  "author": "astosia",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {
+     "@rebble/clay": "^1.0.6"
+  },
+  "pebble": {
+    "displayName": "Find my iPhone or Android",
+    "uuid": "e73da77e-ba28-4c77-a897-4185c55f255d",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": ["aplite", "basalt", "chalk", "diorite", "emery"],
+    "watchapp": {
+      "watchface": false
+    },
+    "capabilities": ["configurable"],
+    "messageKeys": [
+      "Ping",
+      "Cancel",
+      "Status",
+      "Result",
+      "PushoverUserKey",
+      "PushoverAppToken",
+      "Priority",
+      "Sound",
+      "PingOnLaunch"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}
