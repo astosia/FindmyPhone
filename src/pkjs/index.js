@@ -177,11 +177,15 @@ function saveSettings(raw) {
 // ---------- Watch messaging ----------
 
 // Every status also carries the active service name, shown as the title.
-function sendStatus(text, ok) {
+// ringing (optional): true/false tells the watch to start/stop its animation.
+function sendStatus(text, ok, ringing) {
   var provider = loadSettings().provider;
   var msg = { Status: text, Service: PROVIDER_NAMES[provider] };
   if (ok !== null && ok !== undefined) {
     msg.Result = ok ? 1 : 0;           // watch vibrates on a result
+  }
+  if (ringing !== undefined) {
+    msg.Ringing = ringing ? 1 : 0;
   }
   Pebble.sendAppMessage(
     msg,
@@ -272,6 +276,42 @@ function shortErr(err) {
   return 'Error: ' + String(err).substring(0, 24);
 }
 
+// ---------- Stopping everything ----------
+//
+// pingGen identifies the current ping. Stopping or switching bumps it, so a
+// send that finishes afterwards knows it's stale: it doesn't start repeats or
+// report "Ringing!", and a late Pushover emergency alert is cancelled at once.
+var pingGen = 0;
+var pingInFlight = false;
+
+function cancelPushoverReceipt(receipt, token, callback) {
+  postForm(PUSHOVER_API + 'receipts/' + encodeURIComponent(receipt) + '/cancel.json',
+    { token: token }, pushoverOk, function (err) {
+      if (err) { console.log('Pushover cancel error: ' + err); }
+      if (callback) { callback(err); }
+    });
+}
+
+// Stops whatever any service is doing: Bark/ntfy repeats, a Pushover
+// emergency alert (whichever service is selected now), and any send still
+// in flight. callback(hadSomething, err) is optional.
+function stopEverything(s, callback) {
+  var had = !!repeatTimer || pingInFlight;
+  pingGen++;
+  pingInFlight = false;
+  stopRepeats();
+
+  var receipt = localStorage.getItem(RECEIPT_KEY);
+  localStorage.removeItem(RECEIPT_KEY);
+  if (receipt && s.appToken) {
+    cancelPushoverReceipt(receipt, s.appToken, function (err) {
+      if (callback) { callback(true, err); }
+    });
+  } else if (callback) {
+    callback(had, null);
+  }
+}
+
 // ---------- Repeats (Bark and ntfy) ----------
 
 function stopRepeats() {
@@ -284,14 +324,17 @@ function stopRepeats() {
 
 // sendOnce(settings, callback(err)) sends one alert.
 function pingWithRepeats(s, label, sendOnce, repeat) {
-  stopRepeats();
+  var gen = pingGen;
+  pingInFlight = true;
   sendOnce(s, function (err) {
+    if (gen !== pingGen) { return; }     // stopped or switched meanwhile
+    pingInFlight = false;
     if (err) {
       console.log(label + ' error: ' + err);
-      sendStatus(shortErr(err), false);
+      sendStatus(shortErr(err), false, false);
       return;
     }
-    sendStatus('Ringing!', true);
+    sendStatus('Ringing!', true, true);
 
     if (repeat) {
       repeatsLeft = Math.floor(REPEAT_FOR_S / REPEAT_EVERY_S) - 1;
@@ -301,21 +344,13 @@ function pingWithRepeats(s, label, sendOnce, repeat) {
           return;
         }
         repeatsLeft--;
+        if (gen !== pingGen) { stopRepeats(); return; }
         sendOnce(loadSettings(), function (e) {
           if (e) { console.log(label + ' repeat error: ' + e); }
         });
       }, REPEAT_EVERY_S * 1000);
     }
   });
-}
-
-function cancelRepeats() {
-  if (repeatTimer) {
-    stopRepeats();
-    sendStatus('Stopped', true);
-  } else {
-    sendStatus('Nothing to stop', false);
-  }
 }
 
 // ---------- Pushover ----------
@@ -339,10 +374,20 @@ function pushoverPing(s) {
     params.expire = REPEAT_FOR_S;
   }
 
+  var gen = pingGen;
+  pingInFlight = true;
   postForm(PUSHOVER_API + 'messages.json', params, pushoverOk, function (err, json) {
+    if (gen !== pingGen) {
+      // Stopped or switched while this was sending: cancel it straight away.
+      if (!err && json && json.receipt) {
+        cancelPushoverReceipt(json.receipt, s.appToken);
+      }
+      return;
+    }
+    pingInFlight = false;
     if (err) {
       console.log('Pushover error: ' + err);
-      sendStatus(shortErr(err), false);
+      sendStatus(shortErr(err), false, false);
       return;
     }
     if (json && json.receipt) {
@@ -350,27 +395,8 @@ function pushoverPing(s) {
     } else {
       localStorage.removeItem(RECEIPT_KEY);
     }
-    sendStatus('Ringing!', true);
+    sendStatus('Ringing!', true, true);
   });
-}
-
-function pushoverCancel(s) {
-  var receipt = localStorage.getItem(RECEIPT_KEY);
-  if (!receipt) {
-    sendStatus('Nothing to stop', false);
-    return;
-  }
-  postForm(PUSHOVER_API + 'receipts/' + encodeURIComponent(receipt) + '/cancel.json',
-    { token: s.appToken }, pushoverOk,
-    function (err) {
-      localStorage.removeItem(RECEIPT_KEY);
-      if (err) {
-        console.log('Pushover cancel error: ' + err);
-        sendStatus('Stop failed', false);
-      } else {
-        sendStatus('Stopped', true);
-      }
-    });
 }
 
 // ---------- Bark ----------
@@ -426,6 +452,7 @@ function ping() {
     sendStatus('Add keys in settings', false);
     return;
   }
+  stopEverything(s);                     // a new ping replaces any earlier one
   if (s.provider === 'bark') {
     pingWithRepeats(s, 'Bark', barkSend, s.barkRepeat);
   } else if (s.provider === 'ntfy') {
@@ -436,14 +463,15 @@ function ping() {
 }
 
 function cancel() {
-  var s = loadSettings();
-  if (s.provider === 'bark' || s.provider === 'ntfy') {
-    cancelRepeats();
-  } else if (!s.appToken) {
-    sendStatus('Add keys in settings', false);
-  } else {
-    pushoverCancel(s);
-  }
+  stopEverything(loadSettings(), function (had, err) {
+    if (err) {
+      sendStatus('Stop failed', false);
+    } else if (had) {
+      sendStatus('Stopped', true, false);
+    } else {
+      sendStatus('Nothing to stop', false, false);
+    }
+  });
 }
 
 function switchProvider() {
@@ -471,21 +499,22 @@ function switchProvider() {
     }
   }
 
-  stopRepeats();
+  stopEverything(s);                     // nothing carries on from the old service
   storeProvider(next);
-  sendStatus('Using ' + PROVIDER_NAMES[next], true);
+  sendStatus('Using ' + PROVIDER_NAMES[next], true, false);
 }
 
 // ---------- Pebble events ----------
 
+// On start-up we only report status. Pinging on launch is decided by the
+// watch, which sends "Launch" only when the app was opened with Quick Launch
+// (not from the app menu, or when the phone opens it after an install).
 Pebble.addEventListener('ready', function () {
   var s = loadSettings();
   if (!isConfigured(s)) {
     sendStatus('Add keys in settings', false);
-  } else if (s.pingOnLaunch) {
-    ping();
   } else {
-    sendStatus('Press to ping', null);
+    sendStatus('Press to Ping', null);
   }
 });
 
@@ -497,6 +526,11 @@ Pebble.addEventListener('appmessage', function (e) {
     cancel();
   } else if (payload.Switch !== undefined) {
     switchProvider();
+  } else if (payload.Launch !== undefined) {
+    var s = loadSettings();
+    if (isConfigured(s) && s.pingOnLaunch) {
+      ping();
+    }
   }
 });
 
@@ -506,8 +540,8 @@ Pebble.addEventListener('showConfiguration', function () {
 
 Pebble.addEventListener('webviewclosed', function (e) {
   if (!e || !e.response) { return; }
+  stopEverything(loadSettings());        // using the old keys, before they change
   var settings = clay.getSettings(e.response, false);
   saveSettings(settings);
-  stopRepeats();
   sendStatus('Settings saved', true);
 });

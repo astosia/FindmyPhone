@@ -1,14 +1,14 @@
 {
   "name": "findmy",
   "author": "astosia",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "keywords": ["pebble-app"],
   "private": true,
   "dependencies": {
      "@rebble/clay": "^1.0.6"
   },
   "pebble": {
-    "displayName": "Find my, for iPhone & Android",
+    "displayName": "find my iPhone or Android",
     "uuid": "930d5f5c-d864-4797-b756-89d30591bde2",
     "sdkVersion": "3",
     "enableMultiJS": true,
@@ -47,10 +47,61 @@
       "NtfyRepeat",
       "Switch",
       "Service",
-      "PhoneOS"
+      "PhoneOS",
+      "Launch",
+      "Ringing"
     ],
     "resources": {
-      "media": []
+      "media": [
+        {
+          "type": "bitmap",
+          "name": "IMAGE_ACTION_UP",
+          "file": "images/action_up.png",
+          "targetPlatforms": ["aplite", "basalt", "chalk", "diorite", "flint"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_ACTION_UP",
+          "file": "images/action_up_large.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_ACTION_PLAY",
+          "file": "images/action_play.png",
+          "targetPlatforms": ["aplite", "basalt", "chalk", "diorite", "flint"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_ACTION_PLAY",
+          "file": "images/action_play_large.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_ACTION_STOP",
+          "file": "images/action_stop.png",
+          "targetPlatforms": ["aplite", "basalt", "chalk", "diorite", "flint"]
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_ACTION_STOP",
+          "file": "images/action_stop_large.png",
+          "targetPlatforms": ["emery", "gabbro"]
+        },
+        {
+          "type": "raw",
+          "name": "PING_ANIM",
+          "file": "images/ping_anim.pdc",
+          "targetPlatforms": ["basalt", "chalk", "diorite", "flint"]
+        },
+        {
+          "type": "raw",
+          "name": "PING_ANIM",
+          "file": "images/ping_anim_large.pdc",
+          "targetPlatforms": ["emery", "gabbro"]
+        }
+      ]
     }
   }
 }

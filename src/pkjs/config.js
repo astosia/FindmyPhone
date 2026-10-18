@@ -22,11 +22,16 @@ module.exports = [
         defaultValue: 'Service'
       },
       {
+        type: 'heading',
+        defaultValue: 'You can set up more than one service: fill in each one\'s details, then save. Press UP on the watch to switch services.</br>Pushover is the easiest to set up and has a free trial, then a small one-time fee.</br>Other option is free but needs a bit more setup.',
+        size: 6
+      },
+      {
         type: 'select',
         messageKey: 'Provider',
         label: 'Alert service',
         defaultValue: 'pushover',
-        description: 'You can set up more than one: pick each service here in turn and fill in its details, then save. Press UP on the watch to switch between the ones that are set up. Pushover is the easiest to set up and has a free trial, then a small one-time fee. Bark is free, but needs a bit more setup and only works on iPhone. ntfy is free and works best on Android (does not have critical priority notifications on iOS, so will not make a sound when phone is silent).',
+       // description: 'You can set up more than one service: fill in each one\'s details, then save. Press UP on the watch to switch services.</br>Pushover is the easiest to set up and has a free trial, then a small one-time fee.</br>Bark is free, but needs a bit more setup and only works on iPhone.</br>ntfy is free and works best on Android (does not have critical priority notifications on iOS, so will not make a sound when phone is silent).',
         options: [
           { label: 'Pushover (iOS/Android)', value: 'pushover' },
           { label: 'Bark (free, iPhone only)', value: 'bark' },
@@ -43,8 +48,8 @@ module.exports = [
       {
         type: 'toggle',
         messageKey: 'PingOnLaunch',
-        label: 'Ping as soon as the app opens',
-        description: 'Pair this with Quick Launch so one long-press on the watch rings your phone.',
+        label: 'Ping when opened with Quick Launch',
+        description: 'On = ping immediately, Off = press select to ping',
         defaultValue: true
       }
     ]
@@ -107,7 +112,8 @@ module.exports = [
           { label: 'Echo', value: 'echo' },
           { label: 'Climb', value: 'climb' },
           { label: 'Up down', value: 'updown' },
-          { label: 'Alien alarm', value: 'alien' }
+          { label: 'Alien alarm', value: 'alien' },
+          { label: 'Vibrate (no sound)', value: 'vibrate'}
         ]
       }
     ]
@@ -143,6 +149,7 @@ module.exports = [
         messageKey: 'BarkSound',
         group: 'bark',
         label: 'Sound',
+        description: 'upload a file called watchping.caf to Bark to use Custom sound (example file with Sonar sound available at https://github.com/astosia/FindmyPhone).',
         defaultValue: 'alarm',
         options: [
           { label: 'Alarm', value: 'alarm' },
@@ -152,7 +159,8 @@ module.exports = [
           { label: 'Telegraph', value: 'telegraph' },
           { label: 'NewsFlash', value: 'newsflash' },
           { label: 'Minuet', value: 'minuet' },
-          { label: 'Sonar (upload watchping.caf available from https://github.com/astosia/FindmyPhone to Bark first)', value: 'watchping' }
+          { label: 'Silence (no sound)', value: 'silence' },
+          { label: 'Custom', value: 'watchping' }
         ]
       },
       {
