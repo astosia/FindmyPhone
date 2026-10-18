@@ -24,11 +24,11 @@ The phone needs to be within Bluetooth range of the watch and have internet
 With **Ping as soon as the app opens** on (the default), just opening the app
 rings the phone.
 
-## 1. Set up Pushover
+## 1. Set up Pushover (simplest, has a 30 day free trial, then a one time small cost)
 
-1. Install the **Pushover** app on your iPhone and sign in or create an account.
+1. Install the **Pushover** app on your Phone and sign in or create an account.
 2. In the Pushover app's settings, turn on **Critical Alerts** for emergency
-   priority. iOS will ask for permission; allow it. This is what lets it ring
+   priority. Your phone will ask for permission; allow it. This is what lets it ring
    on silent.
 3. On pushover.net, copy your **User Key** from the dashboard.
 4. Still on pushover.net, go to **Your Applications → Create an Application**,
@@ -43,7 +43,7 @@ the watch.
 
 ## 4. Make it one press (recommended)
 
-On the watch, go to **Settings → Quick Launch** and assign **Ping Phone** to a
+On the watch, go to **Settings → Quick Launch** and assign **Find my Phone** to a
 long-press of your choice. Combined with ping-on-launch, holding that button
 from any screen rings your phone.
 
@@ -69,3 +69,47 @@ from any screen rings your phone.
   Pushover is shown on the watch.
 - **Doesn't ring on silent:** check that Critical Alerts is allowed for
   Pushover in iOS Settings → Notifications → Pushover.
+
+
+
+##  Setup for Bark on iOS (free, but a bit more work!)
+
+## 1. Install and allow notifications
+
+Install Bark from the App Store and open it.
+When iOS asks, allow Notifications, and allow Critical Alerts if that prompt appears.
+Check it took effect: go to iPhone Settings → Notifications → Bark and make sure both Allow Notifications and Critical Alerts are on. Critical Alerts is what lets it ring on silent.
+
+## 2. Copy your Bark URL
+
+On Bark’s home screen you’ll see a server address that looks like https://api.day.app/AbCdEf123456/. The part after day.app/ is your private device key.
+Tap it and copy it.
+
+## 3. Test Bark on its own
+
+Turn your iPhone’s silent switch on.
+Paste your URL into Safari on any device, add test?level=critical&volume=10 to the end, and open it, so it looks like:
+https://api.day.app/AbCdEf123456/test?level=critical&volume=10
+Your iPhone should sound and show a “test” notification even though it’s on silent. If it does, Bark is working.
+
+## 4. Set up Find my Phone
+
+In the Pebble app, open Find my Phone → Settings.
+Set Alert service to Bark (free, iPhone only). The Bark fields will appear.
+Paste the whole URL into Device key or URL. Leave Server blank.
+Pick a Sound and leave Keep ringing every 30 seconds on.
+Tap Save. The watch should show “Settings saved”.
+
+## 5. Try it from the watch
+
+Put the phone on silent, then open Find my Phone on the watch or press SELECT.
+The watch should show “Ringing!” and the phone should play the alarm for about 30 seconds, repeating every 30 seconds.
+Hold SELECT to stop the repeats, or just leave the app.
+
+## If it doesn’t work
+
+“Add keys in settings”: the Bark URL field is empty, or the service isn’t set to Bark.
+“Error: …”: the key is wrong. Copy the URL from the Bark app again and re-paste it.
+“Phone not connected”: the watch can’t see the Pebble app. Check Bluetooth and that the Pebble app is still running.
+Notification appears but is silent: Critical Alerts is off. Recheck step 1.
+Repeats stop early: repeats only run while Ping Phone is open on the watch, so keep it on screen until you find the phone.

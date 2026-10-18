@@ -1,15 +1,3 @@
-/*
- * Ping Phone - press a button on your Pebble to make your iPhone ring
- * via a Pushover emergency (critical) alert.
- *
- *   SELECT        -> ping the phone
- *   UP            -> ping the phone (alternative)
- *   hold SELECT   -> stop the alert (cancels the Pushover emergency retries)
- *
- * The watch has no internet of its own: it sends an AppMessage to the
- * PebbleKit JS half (src/pkjs/index.js), which runs inside the Pebble app
- * on the phone and calls the Pushover API.
- */
 #include <pebble.h>
 
 static Window *s_window;
@@ -17,13 +5,22 @@ static TextLayer *s_title_layer;
 static TextLayer *s_status_layer;
 static TextLayer *s_hint_layer;
 
-static char s_status[64] = "Press to ping";
+static char s_status[64] = "Press to Find";
+static char s_service[24] = "Find Phone";
 
 static void set_status(const char *text) {
   strncpy(s_status, text, sizeof(s_status) - 1);
   s_status[sizeof(s_status) - 1] = '\0';
   if (s_status_layer) {
     text_layer_set_text(s_status_layer, s_status);
+  }
+}
+
+static void set_service(const char *text) {
+  strncpy(s_service, text, sizeof(s_service) - 1);
+  s_service[sizeof(s_service) - 1] = '\0';
+  if (s_title_layer) {
+    text_layer_set_text(s_title_layer, s_service);
   }
 }
 
@@ -57,14 +54,18 @@ static void ping_click_handler(ClickRecognizerRef recognizer, void *context) {
   send_command(MESSAGE_KEY_Ping, "Pinging...");
 }
 
-static void cancel_long_click_handler(ClickRecognizerRef recognizer, void *context) {
+static void cancel_click_handler(ClickRecognizerRef recognizer, void *context) {
   send_command(MESSAGE_KEY_Cancel, "Stopping...");
 }
 
+static void switch_click_handler(ClickRecognizerRef recognizer, void *context) {
+  send_command(MESSAGE_KEY_Switch, "Switching...");
+}
+
 static void click_config_provider(void *context) {
-  window_single_click_subscribe(BUTTON_ID_SELECT, ping_click_handler);
-  window_single_click_subscribe(BUTTON_ID_UP, ping_click_handler);
-  window_long_click_subscribe(BUTTON_ID_SELECT, 700, cancel_long_click_handler, NULL);
+  window_single_click_subscribe(BUTTON_ID_UP, switch_click_handler);     /* swap service */
+  window_single_click_subscribe(BUTTON_ID_SELECT, ping_click_handler);   /* ping */
+  window_single_click_subscribe(BUTTON_ID_DOWN, cancel_click_handler);   /* stop */
 }
 
 /* ---------- AppMessage ---------- */
@@ -73,6 +74,11 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
   Tuple *status_t = dict_find(iter, MESSAGE_KEY_Status);
   if (status_t && status_t->type == TUPLE_CSTRING) {
     set_status(status_t->value->cstring);
+  }
+
+  Tuple *service_t = dict_find(iter, MESSAGE_KEY_Service);
+  if (service_t && service_t->type == TUPLE_CSTRING) {
+    set_service(service_t->value->cstring);
   }
 
   Tuple *result_t = dict_find(iter, MESSAGE_KEY_Result);
@@ -106,21 +112,20 @@ static void window_load(Window *window) {
 
   /* Bigger hint text on the larger Pebble Time 2 screen (200x228). */
   const bool large_screen = bounds.size.w >= 200;
-  GFont title_font  = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-  GFont status_font = fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD);
-  GFont hint_font   = fonts_get_system_font(large_screen ? FONT_KEY_GOTHIC_24_BOLD
-                                                         : FONT_KEY_GOTHIC_18_BOLD);
-  const int16_t hint_h  = large_screen ? 54 : 42;
+  GFont title_font  = fonts_get_system_font(large_screen ? FONT_KEY_GOTHIC_28_BOLD : FONT_KEY_GOTHIC_24_BOLD);
+  GFont status_font = fonts_get_system_font(large_screen ? FONT_KEY_GOTHIC_24_BOLD : FONT_KEY_GOTHIC_18_BOLD);
+  GFont hint_font   = fonts_get_system_font(large_screen ? FONT_KEY_GOTHIC_24 : FONT_KEY_GOTHIC_18);
+  const int16_t hint_h  = large_screen ? 84 : 63;   /* three lines */
   const int16_t title_y = PBL_IF_ROUND_ELSE(14, 0);
   const int16_t title_h = 34;
   const int16_t hint_y  = bounds.size.h - hint_h - PBL_IF_ROUND_ELSE(14, 2);
   const int16_t status_y = title_y + title_h;
   const int16_t status_h = hint_y - status_y;
 
-  window_set_background_color(window, PBL_IF_COLOR_ELSE(GColorOxfordBlue, GColorBlack));
+  window_set_background_color(window, PBL_IF_COLOR_ELSE(GColorMidnightGreen, GColorBlack));
 
   s_title_layer = text_layer_create(GRect(inset, title_y, width, title_h));
-  text_layer_set_text(s_title_layer, "Ping Phone");
+  text_layer_set_text(s_title_layer, s_service);
   text_layer_set_font(s_title_layer, title_font);
   text_layer_set_text_alignment(s_title_layer, GTextAlignmentCenter);
   text_layer_set_background_color(s_title_layer, GColorClear);
@@ -133,15 +138,15 @@ static void window_load(Window *window) {
   text_layer_set_text_alignment(s_status_layer, GTextAlignmentCenter);
   text_layer_set_overflow_mode(s_status_layer, GTextOverflowModeWordWrap);
   text_layer_set_background_color(s_status_layer, GColorClear);
-  text_layer_set_text_color(s_status_layer, PBL_IF_COLOR_ELSE(GColorChromeYellow, GColorWhite));
+  text_layer_set_text_color(s_status_layer, PBL_IF_COLOR_ELSE(GColorYellow, GColorWhite));
   layer_add_child(root, text_layer_get_layer(s_status_layer));
 
   s_hint_layer = text_layer_create(GRect(inset, hint_y, width, hint_h));
-  text_layer_set_text(s_hint_layer, "Press: ping\nHold: stop");
+  text_layer_set_text(s_hint_layer, "Up: switch service\nSelect: ping\nDown: stop");
   text_layer_set_font(s_hint_layer, hint_font);
   text_layer_set_text_alignment(s_hint_layer, GTextAlignmentCenter);
   text_layer_set_background_color(s_hint_layer, GColorClear);
-  text_layer_set_text_color(s_hint_layer, PBL_IF_COLOR_ELSE(GColorLightGray, GColorWhite));
+  text_layer_set_text_color(s_hint_layer, PBL_IF_COLOR_ELSE(GColorWhite, GColorWhite));
   layer_add_child(root, text_layer_get_layer(s_hint_layer));
 }
 
