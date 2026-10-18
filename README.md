@@ -18,11 +18,12 @@ The phone needs to be within Bluetooth range of the watch and have internet
 
 | Button       | Action                                   |
 |--------------|------------------------------------------|
-| SELECT or UP | Ping the phone                           |
-| Hold SELECT  | Stop the alert (cancels repeat alerts)   |
+| UP           | Swap Services                            |
+| SELECT       | Ping the phone                           |
+| Down         | Stop the alert (cancels repeat alerts)   |
 
-With **Ping as soon as the app opens** on (the default), just opening the app
-rings the phone.
+With **Ping as soon as the app opens** on, opening the app from quicklaunch rings
+the phone.
 
 ## 1. Set up Pushover (simplest, has a 30 day free trial, then a one time small cost)
 
@@ -45,7 +46,7 @@ the watch.
 
 On the watch, go to **Settings → Quick Launch** and assign **Find my Phone** to a
 long-press of your choice. Combined with ping-on-launch, holding that button
-from any screen rings your phone.
+from your watchface opens the app and rings your phone.
 
 ## How the alert behaves
 
@@ -53,18 +54,11 @@ from any screen rings your phone.
   until you acknowledge it in Pushover or hold SELECT on the watch.
 - **High / Normal:** a single notification. These may not ring on silent.
 
-## Files
-
-- `src/c/main.c`: the watch UI and buttons
-- `src/pkjs/index.js`: runs on the phone and calls the Pushover API
-- `src/pkjs/config.js`: the settings page
-- `package.json`, `wscript`: project and build config
-
 ## Troubleshooting
 
 - **"Phone not connected":** the watch can't see the Pebble app. Check
   Bluetooth, and make sure the Pebble app hasn't been swiped closed.
-- **"Add Pushover keys…":** open Settings in the Pebble app and fill in both keys.
+- **"Add keys…":** open Settings in the Pebble app and fill in both keys.
 - **Pushover error:** usually a mistyped key or token; the message from
   Pushover is shown on the watch.
 - **Doesn't ring on silent:** check that Critical Alerts is allowed for
@@ -106,7 +100,7 @@ Put the phone on silent, then open Find my Phone on the watch or press SELECT.
 The watch should show “Ringing!” and the phone should play the alarm for about 30 seconds, repeating every 30 seconds.
 Hold SELECT to stop the repeats, or just leave the app.
 
-## If it doesn’t work
+## 6. If it doesn’t work
 
 “Add keys in settings”: the Bark URL field is empty, or the service isn’t set to Bark.
 “Error: …”: the key is wrong. Copy the URL from the Bark app again and re-paste it.
