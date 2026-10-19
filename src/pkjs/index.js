@@ -5,10 +5,12 @@
 //   - Bark      (free, iPhone only; critical alerts, repeats driven from here)
 //   - ntfy      (free, best on Android; max priority, repeats driven from here.  
 //                Does not have critical priority on iOS, so it is not recommended for iPhone users.)
+//   - Play on phone (free, Android only; plays a tone directly on the phone, no internet or account needed)
 
 var Clay = require('@rebble/clay');
 var clayConfig = require('./config');
 var clayCustom = require('./config-custom');
+var phoneAlarm = require('./phone-alarm');
 
 // We handle the settings page ourselves so the provider keys stay on the
 // phone and are never sent to the watch.
@@ -31,14 +33,14 @@ var REPEAT_FOR_S = 300;
 var ALERT_TITLE = 'Ping Phone';
 var ALERT_BODY = 'Your watch is looking for this phone.';
 
-var PROVIDERS = ['pushover', 'bark', 'ntfy'];
-var PROVIDER_NAMES = { pushover: 'Pushover', bark: 'Bark', ntfy: 'ntfy' };
+var PROVIDERS = ['pushover', 'bark', 'ntfy', 'phone'];
+var PROVIDER_NAMES = { pushover: 'Pushover', bark: 'Bark', ntfy: 'ntfy', phone: 'Phone alarm' };
 
-// Which services make sense on which phone: Bark is iPhone-only, and ntfy
-// can't ring through silent on iPhone.
+// Which services make sense on which phone: Bark is iPhone-only, ntfy can't
+// ring through silent on iPhone, and the phone alarm needs Android's web view.
 var PROVIDERS_FOR_OS = {
   ios: ['pushover', 'bark'],
-  android: ['pushover', 'ntfy']
+  android: ['pushover', 'ntfy', 'phone']
 };
 
 function detectOS(userAgent) {
@@ -130,18 +132,43 @@ function loadSettings() {
     ntfyTopic: ntfy.id,
     ntfyServer: ntfy.server,
     ntfyToken: str(raw.NtfyToken),
-    ntfyRepeat: bool(raw.NtfyRepeat, true)
+    ntfyRepeat: bool(raw.NtfyRepeat, true),
+
+    phoneTune: str(raw.PhoneTune) || 'sonarclip'
   };
 }
 
 function isConfiguredFor(s, provider) {
   if (provider === 'bark') { return !!s.barkKey; }
   if (provider === 'ntfy') { return !!s.ntfyTopic; }
+  if (provider === 'phone') { return phoneAlarm.isSupported(); }   // nothing to set up
   return !!(s.userKey && s.appToken);
 }
 
 function isConfigured(s) {
   return isConfiguredFor(s, s.provider);
+}
+
+// First run on a phone that can play sound itself (Android): start with
+// "Play on phone" selected, so it works without opening settings. Also
+// written into Clay's copy so the settings page shows the same choice.
+// Does nothing once any settings have been saved, so it never overrides
+// a user's choice.
+function applyFirstRunDefaults() {
+  if (localStorage.getItem(SETTINGS_KEY) || !phoneAlarm.isSupported()) { return; }
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify({ Provider: 'phone', PhoneTune: 'sonarclip' }));
+  if (!localStorage.getItem('clay-settings')) {
+    localStorage.setItem('clay-settings', JSON.stringify({ Provider: 'phone', PhoneTune: 'sonarclip' }));
+  }
+}
+
+// What to tell the user when the selected service can't be used yet.
+function notReadyMessage(s) {
+  if (s.provider === 'phone') {
+    // No Web Audio here: an iPhone, or the emulator (no Android web view).
+    return 'Phone alarm needs Android';
+  }
+  return 'Add keys in settings';
 }
 
 // Writes the chosen provider into our settings and into Clay's own copy,
@@ -296,10 +323,11 @@ function cancelPushoverReceipt(receipt, token, callback) {
 // emergency alert (whichever service is selected now), and any send still
 // in flight. callback(hadSomething, err) is optional.
 function stopEverything(s, callback) {
-  var had = !!repeatTimer || pingInFlight;
+  var had = !!repeatTimer || pingInFlight || phoneAlarm.isPlaying();
   pingGen++;
   pingInFlight = false;
   stopRepeats();
+  phoneAlarm.stop();
 
   var receipt = localStorage.getItem(RECEIPT_KEY);
   localStorage.removeItem(RECEIPT_KEY);
@@ -449,7 +477,7 @@ function ntfySend(s, callback) {
 function ping() {
   var s = loadSettings();
   if (!isConfigured(s)) {
-    sendStatus('Add keys in settings', false);
+    sendStatus(notReadyMessage(s), false);
     return;
   }
   stopEverything(s);                     // a new ping replaces any earlier one
@@ -457,6 +485,13 @@ function ping() {
     pingWithRepeats(s, 'Bark', barkSend, s.barkRepeat);
   } else if (s.provider === 'ntfy') {
     pingWithRepeats(s, 'ntfy', ntfySend, s.ntfyRepeat);
+  } else if (s.provider === 'phone') {
+    var err = phoneAlarm.play(s.phoneTune, REPEAT_FOR_S);
+    if (err) {
+      sendStatus(err, false, false);
+    } else {
+      sendStatus('Ringing!', true, true);
+    }
   } else {
     pushoverPing(s);
   }
@@ -510,9 +545,10 @@ function switchProvider() {
 // watch, which sends "Launch" only when the app was opened with Quick Launch
 // (not from the app menu, or when the phone opens it after an install).
 Pebble.addEventListener('ready', function () {
+  applyFirstRunDefaults();
   var s = loadSettings();
   if (!isConfigured(s)) {
-    sendStatus('Add keys in settings', false);
+    sendStatus(notReadyMessage(s), false);
   } else {
     sendStatus('Press to Ping', null);
   }

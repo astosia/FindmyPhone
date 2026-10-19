@@ -1,8 +1,6 @@
 // Settings page shown in the Pebble phone app (Ping Phone -> Settings).
-// Built with Clay: https://github.com/pebble/clay
 // Items tagged with group 'pushover', 'bark' or 'ntfy' are shown/hidden by
 // config-custom.js depending on the selected provider and the phone type
-// (ntfy is hidden on iPhone, Bark on Android).
 module.exports = [
   {
     type: 'heading',
@@ -35,7 +33,8 @@ module.exports = [
         options: [
           { label: 'Pushover (iOS/Android)', value: 'pushover' },
           { label: 'Bark (free, iPhone only)', value: 'bark' },
-          { label: 'ntfy (free, best on Android)', value: 'ntfy' }
+          { label: 'ntfy (free, best on Android)', value: 'ntfy' },
+          { label: 'Play on phone (free, Android only)', value: 'phone' }
         ]
       },
       {
@@ -221,6 +220,42 @@ module.exports = [
         label: 'Keep ringing every 30 seconds',
         description: 'Re-sends the alert for up to 5 minutes while Ping Phone is open on the watch. Press DOWN to stop.',
         defaultValue: true
+      }
+    ]
+  },
+
+  // ---------- Play on phone (Android only) ----------
+  {
+    type: 'section',
+    items: [
+      {
+        type: 'heading',
+        defaultValue: 'Play on phone',
+        group: 'phone'
+      },
+      {
+        type: 'text',
+        group: 'phone',
+        defaultValue:
+          'Plays an alarm tone directly from the Pebble app on your phone. No account, app or internet needed. ' +
+          'It uses your phone\'s media volume, so it sounds even when the phone is on silent or vibrate, ' +
+          'as long as the media volume is turned up. It plays for up to 5 minutes, ' +
+          'and stops when you press DOWN or close the app on the watch.'
+      },
+      {
+        type: 'select',
+        messageKey: 'PhoneTune',
+        group: 'phone',
+        label: 'Tone',
+        defaultValue: 'sonarclip',
+        options: [
+          { label: 'Sonar', value: 'sonarclip' },
+          { label: 'Ping', value: 'sonar' },
+          { label: 'Alarm', value: 'alarm' },
+          { label: 'Siren', value: 'siren' },
+          { label: 'Chirps', value: 'chirps' },
+          { label: 'Beeper', value: 'beeper' }
+        ]
       }
     ]
   },

@@ -1,12 +1,15 @@
 // Runs inside the Clay settings page (a web view on the phone):
 //  - works out whether the phone is an iPhone or Android and hides the
-//    service that doesn't suit it (ntfy on iPhone, Bark on Android)
+//    services that don't suit it (ntfy and Play on phone on iPhone, Bark on Android)
 //  - shows only the settings for the provider that is currently selected
 //  - fills in a random ntfy topic if none has been set yet
 module.exports = function (minified) {
   var clayConfig = this;
-  var GROUPS = ['pushover', 'bark', 'ntfy'];
-  var HIDE_FOR_OS = { ios: 'ntfy', android: 'bark' };
+  var GROUPS = ['pushover', 'bark', 'ntfy', 'phone'];
+  // Services that don't suit each phone. 'phone' (play on phone) needs
+  // Android's web view, so it's hidden on iPhone.
+  var HIDE_FOR_OS = { ios: ['ntfy', 'phone'], android: ['bark'] };
+  //var HIDE_FOR_OS = { ios: [], android: ['bark'] };
 
   function detectOS() {
     var ua = String((window.navigator && window.navigator.userAgent) || '');
@@ -55,8 +58,8 @@ module.exports = function (minified) {
     }
 
     var providerItem = clayConfig.getItemByMessageKey('Provider');
-    var hidden = HIDE_FOR_OS[os];
-    if (providerItem && hidden) {
+    (HIDE_FOR_OS[os] || []).forEach(function (hidden) {
+      if (!providerItem) { return; }
       if (providerItem.get() === hidden) {
         providerItem.set('pushover');
       }
@@ -64,7 +67,7 @@ module.exports = function (minified) {
       // Its settings are never needed on this phone.
       clayConfig.getItemsByGroup(hidden).forEach(function (item) { item.hide(); });
       GROUPS = GROUPS.filter(function (g) { return g !== hidden; });
-    }
+    });
 
     var topicItem = clayConfig.getItemByMessageKey('NtfyTopic');
     if (topicItem && !String(topicItem.get() || '').trim()) {

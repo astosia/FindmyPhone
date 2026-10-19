@@ -1,7 +1,7 @@
 {
   "name": "findmy",
   "author": "astosia",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "keywords": ["pebble-app"],
   "private": true,
   "dependencies": {
@@ -49,7 +49,8 @@
       "Service",
       "PhoneOS",
       "Launch",
-      "Ringing"
+      "Ringing",
+      "PhoneTune"
     ],
     "resources": {
       "media": [
